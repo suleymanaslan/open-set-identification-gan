@@ -1,6 +1,13 @@
 import os
+import time
 import shutil
 import numpy as np
+import matplotlib.pyplot as plt
+
+import torch
+import torchvision.datasets
+import torchvision.transforms as transforms
+
 from tqdm import tqdm
 
 
@@ -48,3 +55,47 @@ def copy_data():
             break
     
     print(f"Min number of images for an identity:{min_nb_images}")
+
+
+def print_and_log(model_dir, text):
+    print(text)
+    print(text, file=open(f'{model_dir}/log.txt', 'a'))
+
+
+def init_training(batch_size):
+    training_timestamp = str(int(time.time()))
+    model_dir = f'trained_models/model_{training_timestamp}/'
+
+    if not os.path.exists(model_dir):
+        os.makedirs(model_dir)
+    
+    shutil.copy2('./vggface2_gan.ipynb', model_dir)
+    shutil.copy2('./networks.py', model_dir)
+    shutil.copy2('./model.py', model_dir)
+    
+    dataset = torchvision.datasets.ImageFolder(root="data/aligned_train", transform=transforms.Compose([transforms.Resize(256),
+                                                                                                        transforms.RandomHorizontalFlip(),
+                                                                                                        transforms.ToTensor(),
+                                                                                                        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]))
+
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True, drop_last=True)
+    
+    return model_dir, dataloader
+
+
+def save_model(model_dir, discriminator_net, generator_net, generator_losses, discriminator_losses, generated_images):
+    torch.save(discriminator_net.state_dict(), f"{model_dir}/net_discriminator.pth")
+    torch.save(generator_net.state_dict(), f"{model_dir}/net_generator.pth")
+    np.save(f"{model_dir}/losses_generator.npy", np.array(generator_losses))
+    np.save(f"{model_dir}/losses_discriminator.npy", np.array(discriminator_losses))
+    np.save(f"{model_dir}/generated_images.npy", generated_images)
+    
+    plt.figure(figsize=(10,5))
+    plt.title("Generator and Discriminator Loss During Training")
+    plt.plot(generator_losses,label="Generator")
+    plt.plot(discriminator_losses,label="Discriminator")
+    plt.xlabel("iterations")
+    plt.ylabel("Loss")
+    plt.legend()
+    plt.savefig(f"{model_dir}/loss.png")
+    plt.show()
