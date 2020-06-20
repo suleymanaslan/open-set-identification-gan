@@ -46,6 +46,7 @@ def train(discriminator_net, generator_net, optimizer_d, optimizer_g, model_dir)
     alpha_update_cons = 0.0025
     epoch_per_scale = 64
     batch_size = 64
+    scale_iter = 20000
     learning_rate = 0.001
     
     show_scaled_img = False
@@ -75,7 +76,7 @@ def train(discriminator_net, generator_net, optimizer_d, optimizer_g, model_dir)
             plt.imshow((real_images[0].numpy().transpose(1, 2, 0)+1.0)*0.5)
             plt.show()
         
-        for batch_step in range(1, (epoch_per_scale*20000//batch_size)+1):
+        for batch_step in range(1, (epoch_per_scale*scale_iter//batch_size)+1):
             if batch_step % 25 == 0 and model_alpha > 0:
                 model_alpha = model_alpha - alpha_update_cons
                 model_alpha = 0.0 if model_alpha < 1e-5 else model_alpha
@@ -132,11 +133,11 @@ def train(discriminator_net, generator_net, optimizer_d, optimizer_g, model_dir)
             optimizer_g.step()
             
             if batch_step == 1 or batch_step % 100 == 0:
-                utils.print_and_log(model_dir, f"{datetime.now()} [{scale}/{n_scales}][{batch_step:05d}/{epoch_per_scale*10000//batch_size}], Alpha:{model_alpha:.4f}, "
+                utils.print_and_log(model_dir, f"{datetime.now()} [{scale}/{n_scales}][{batch_step:05d}/{epoch_per_scale*scale_iter//batch_size}], Alpha:{model_alpha:.4f}, "
                                     f"Loss_G:{loss_g_fake.item():.4f}, Loss_DR:{loss_d.item():.4f}, "
                                     f"Loss_DF:{loss_d_fake.item():.4f}, Loss_DG:{loss_d_grad:.4f}, Loss_DE:{loss_epsilon.item():.4f}")
             
-            if batch_step % 100 == 0:
+            if batch_step % (scale_iter//16) == 0:
                 with torch.no_grad():
                     generated_inputs = generator_net(fixed_latent).detach()
                     generated_images[scale] += [generated_inputs.cpu().numpy().transpose(0, 2, 3, 1)]
