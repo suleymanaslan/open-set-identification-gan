@@ -73,7 +73,7 @@ def init_training(batch_size):
     shutil.copy2('./networks.py', model_dir)
     shutil.copy2('./model.py', model_dir)
     
-    dataset = torchvision.datasets.ImageFolder(root="data/aligned_train", transform=transforms.Compose([transforms.Resize(256),
+    dataset = torchvision.datasets.ImageFolder(root="data/aligned_train", transform=transforms.Compose([transforms.Resize(64),
                                                                                                         transforms.RandomHorizontalFlip(),
                                                                                                         transforms.ToTensor(),
                                                                                                         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]))

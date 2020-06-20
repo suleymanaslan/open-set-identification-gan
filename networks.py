@@ -11,11 +11,9 @@ def weights_init(m):
 
 
 class Generator(nn.Module):
-    def __init__(self, latent_size=100, input_channels=3, feature_map_size=32):
+    def __init__(self, latent_size=100, input_channels=3, feature_map_size=64):
         super(Generator, self).__init__()
         net_channels = [latent_size,
-                        feature_map_size*32,
-                        feature_map_size*16,
                         feature_map_size*8,
                         feature_map_size*4,
                         feature_map_size*2,
@@ -26,9 +24,7 @@ class Generator(nn.Module):
             nn.ConvTranspose2d(net_channels[1], net_channels[2], 4, 2, 1), nn.BatchNorm2d(net_channels[2]), nn.ReLU(True),
             nn.ConvTranspose2d(net_channels[2], net_channels[3], 4, 2, 1), nn.BatchNorm2d(net_channels[3]), nn.ReLU(True),
             nn.ConvTranspose2d(net_channels[3], net_channels[4], 4, 2, 1), nn.BatchNorm2d(net_channels[4]), nn.ReLU(True),
-            nn.ConvTranspose2d(net_channels[4], net_channels[5], 4, 2, 1), nn.BatchNorm2d(net_channels[5]), nn.ReLU(True),
-            nn.ConvTranspose2d(net_channels[5], net_channels[6], 4, 2, 1), nn.BatchNorm2d(net_channels[6]), nn.ReLU(True),
-            nn.ConvTranspose2d(net_channels[6], net_channels[7], 4, 2, 1), nn.Tanh()
+            nn.ConvTranspose2d(net_channels[4], net_channels[5], 4, 2, 1), nn.Tanh()
         )
 
     def forward(self, input):
@@ -36,24 +32,20 @@ class Generator(nn.Module):
 
 
 class Discriminator(nn.Module):
-    def __init__(self, input_channels=3, output_channels=1, feature_map_size=32, groups=1):
+    def __init__(self, input_channels=3, output_channels=1, feature_map_size=64, groups=1):
         super(Discriminator, self).__init__()
         net_channels = [input_channels,
                         feature_map_size*1,
                         feature_map_size*2,
                         feature_map_size*4,
                         feature_map_size*8,
-                        feature_map_size*16,
-                        feature_map_size*32,
                         output_channels]
         self.main = nn.Sequential(
             nn.Conv2d(net_channels[0], net_channels[1], 4, 2, 1), nn.LeakyReLU(0.2, inplace=True),
             nn.Conv2d(net_channels[1], net_channels[2], 4, 2, 1), nn.BatchNorm2d(net_channels[2]), nn.LeakyReLU(0.2, inplace=True),
             nn.Conv2d(net_channels[2], net_channels[3], 4, 2, 1), nn.BatchNorm2d(net_channels[3]), nn.LeakyReLU(0.2, inplace=True),
             nn.Conv2d(net_channels[3], net_channels[4], 4, 2, 1), nn.BatchNorm2d(net_channels[4]), nn.LeakyReLU(0.2, inplace=True),
-            nn.Conv2d(net_channels[4], net_channels[5], 4, 2, 1), nn.BatchNorm2d(net_channels[5]), nn.LeakyReLU(0.2, inplace=True),
-            nn.Conv2d(net_channels[5], net_channels[6], 4, 2, 1), nn.BatchNorm2d(net_channels[6]), nn.LeakyReLU(0.2, inplace=True),
-            nn.Conv2d(net_channels[6], net_channels[7], 4, 1, 0), nn.Sigmoid()
+            nn.Conv2d(net_channels[4], net_channels[5], 4, 1, 0), nn.Sigmoid()
         )
 
     def forward(self, input):
