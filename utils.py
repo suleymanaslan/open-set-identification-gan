@@ -62,16 +62,21 @@ def print_and_log(model_dir, text):
     print(text, file=open(f'{model_dir}/log.txt', 'a'))
 
 
-def init_training(batch_size):
+def init_training(batch_size, pgan=False):
     training_timestamp = str(int(time.time()))
     model_dir = f'trained_models/model_{training_timestamp}/'
 
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
     
-    shutil.copy2('./vggface2_gan.ipynb', model_dir)
-    shutil.copy2('./networks.py', model_dir)
-    shutil.copy2('./model.py', model_dir)
+    if pgan:
+        shutil.copy2('./vggface2_pgan.ipynb', model_dir)
+        shutil.copy2('./pgan_networks.py', model_dir)
+        shutil.copy2('./pgan_model.py', model_dir)
+    else:
+        shutil.copy2('./vggface2_gan.ipynb', model_dir)
+        shutil.copy2('./networks.py', model_dir)
+        shutil.copy2('./model.py', model_dir)
     
     dataset = torchvision.datasets.ImageFolder(root="data/aligned_train", transform=transforms.Compose([transforms.Resize(64),
                                                                                                         transforms.RandomHorizontalFlip(),
@@ -99,3 +104,33 @@ def save_model(model_dir, discriminator_net, generator_net, generator_losses, di
     plt.legend()
     plt.savefig(f"{model_dir}/loss.png")
     plt.show()
+
+
+def get_dataloader(image_size=64, batch_size=8):
+    dataset = torchvision.datasets.ImageFolder(root="data/aligned_train", transform=transforms.Compose([transforms.Resize(image_size),
+                                                                                                        transforms.RandomHorizontalFlip(),
+                                                                                                        transforms.ToTensor(),
+                                                                                                        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]))
+
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True, drop_last=True)
+    
+    return dataloader
+
+
+def save_pgan_model(model_dir, discriminator_net, generator_net, fixed_latent, generated_images, n_scales=5):
+    img_sizes = {0: 4, 1: 8, 2: 16, 3: 32, 4: 64}
+    
+    torch.save(discriminator_net.state_dict(), f"{model_dir}/net_discriminator.pth")
+    torch.save(generator_net.state_dict(), f"{model_dir}/net_generator.pth")
+    torch.save(fixed_latent, f"{model_dir}/fixed_latent.pt")
+    for i in range(n_scales):
+        np.save(f"{model_dir}/generated_images_{img_sizes[i]}x{img_sizes[i]}.npy", generated_images[i])
+
+
+def plot_generated_images(model_dir, generated_images, n_scales=5):
+    img_sizes = {0: 4, 1: 8, 2: 16, 3: 32, 4: 64}
+    
+    for i in range(n_scales):
+        eval_img = generated_images[i][-1][-1]
+        plt.figure(figsize=(9*2, 4*2))
+        plt.imshow((eval_img+1.0)*0.5)

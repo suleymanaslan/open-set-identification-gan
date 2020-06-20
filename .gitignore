@@ -128,3 +128,5 @@ vggface2_data/
 data/
 output/
 trained_models/
+
+pytorch_GAN_zoo/
