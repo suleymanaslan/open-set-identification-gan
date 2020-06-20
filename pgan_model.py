@@ -41,18 +41,18 @@ def train(discriminator_net, generator_net, optimizer_d, optimizer_g, model_dir)
     
     epsilon_d = 0.001
     
-    n_scales = 2
+    n_scales = 5
     model_alpha = 0.0
     alpha_update_cons = 0.0025
-    epoch_per_scale = 16
-    batch_size = 8
+    epoch_per_scale = 64
+    batch_size = 64
     learning_rate = 0.001
     
-    show_scaled_img = True
+    show_scaled_img = False
     normalize_t = torch.Tensor([0.5]).to(device)
     scale_t = torch.Tensor([255]).to(device)
     
-    fixed_latent = torch.randn(8, 512).to(device)
+    fixed_latent = torch.randn(16, 512).to(device)
     
     generated_images = {0: [], 
                         1: [], 
@@ -66,7 +66,7 @@ def train(discriminator_net, generator_net, optimizer_d, optimizer_g, model_dir)
         if scale > 0:
             model_alpha = 1.0
         
-        dataloader = utils.get_dataloader(image_size=2**(scale+2), batch_size=8)
+        dataloader = utils.get_dataloader(image_size=2**(scale+2), batch_size=batch_size)
         
         utils.print_and_log(model_dir, f"{datetime.now()} Starting scale:{scale}")
         
@@ -75,7 +75,7 @@ def train(discriminator_net, generator_net, optimizer_d, optimizer_g, model_dir)
             plt.imshow((real_images[0].numpy().transpose(1, 2, 0)+1.0)*0.5)
             plt.show()
         
-        for batch_step in range(1, (epoch_per_scale*200//batch_size)+1):
+        for batch_step in range(1, (epoch_per_scale*20000//batch_size)+1):
             if batch_step % 25 == 0 and model_alpha > 0:
                 model_alpha = model_alpha - alpha_update_cons
                 model_alpha = 0.0 if model_alpha < 1e-5 else model_alpha
