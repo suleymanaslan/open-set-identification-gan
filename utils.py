@@ -64,7 +64,8 @@ def print_and_log(model_dir, text):
 
 def init_training(batch_size, pgan=False):
     training_timestamp = str(int(time.time()))
-    model_dir = f'trained_models/model_{training_timestamp}/'
+    model_label = "pgan" if pgan else "gan"
+    model_dir = f'trained_models/model_{model_label}_{training_timestamp}/'
 
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
