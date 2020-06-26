@@ -9,6 +9,8 @@ import torch
 import torchvision.datasets
 import torchvision.transforms as transforms
 
+import batch_iterator
+
 from tqdm import tqdm
 
 
@@ -124,7 +126,7 @@ def init_training(batch_size, pgan=False):
     return model_dir, dataloader
 
 
-def init_identification_training(batch_size):
+def init_identification_training(batch_size, use_preprocessed_data=False):
     training_timestamp = str(int(time.time()))
     model_dir = f'trained_models/model_identification_resnext_{training_timestamp}/'
     
@@ -132,6 +134,14 @@ def init_identification_training(batch_size):
         os.makedirs(model_dir)
     
     shutil.copy2('./identification_resnext.ipynb', model_dir)
+    
+    if use_preprocessed_data:
+        train_data = torch.load("data/preprocessed_data/train_data.pt")
+        train_labels = torch.load("data/preprocessed_data/train_labels.pt")
+        
+        batch_iter = batch_iterator.BatchIterator(train_data, train_labels, batch_size)
+        
+        return model_dir, batch_iter
     
     data_dirs = {"train": "aligned_train", "val": "aligned_val"}
     
@@ -236,5 +246,31 @@ def evaluate_identification(model_dir, network, data_dirs, dataloaders, class_na
         for j in range(num_images):
             plt.figure(figsize=(8,8))
             plt.title(f"Actual:{class_names[val_labels[j]]}, Predicted:{class_names[preds[j]]}")
+            plt.imshow((np.transpose(val_inputs[j].cpu().numpy(), (1, 2, 0))*np.array([0.229, 0.224, 0.225]))+np.array([0.485, 0.456, 0.406]))
+            plt.savefig(f"{model_dir}/sample_predicted_{j}.png")
+
+
+def evaluate_identification_batch_iter(model_dir, network, class_names):
+    device = torch.device("cuda:0")
+    
+    network.eval()
+    num_images = 3
+    
+    val_data = torch.load("data/preprocessed_data/val_data.pt")
+    val_labels = torch.load("data/preprocessed_data/val_labels.pt")
+    
+    batch_iter = batch_iterator.BatchIterator(val_data, val_labels, batch_size=8)
+    
+    with torch.no_grad():
+        val_inputs, val_labels = batch_iter.next_batch()
+        val_inputs = ((val_inputs.type(torch.FloatTensor).to(device) / scale_t) - normalize_mean_t) / normalize_std_t
+        val_labels = val_labels.type(torch.long).to(device)
+        
+        outputs = network(val_inputs)
+        _, preds = torch.max(outputs, 1)
+        
+        for j in range(num_images):
+            plt.figure(figsize=(8,8))
+            plt.title(f"Actual:{val_labels[j]}, Predicted:{preds[j]}")
             plt.imshow((np.transpose(val_inputs[j].cpu().numpy(), (1, 2, 0))*np.array([0.229, 0.224, 0.225]))+np.array([0.485, 0.456, 0.406]))
             plt.savefig(f"{model_dir}/sample_predicted_{j}.png")
