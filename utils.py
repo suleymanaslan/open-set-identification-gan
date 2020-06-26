@@ -3,6 +3,7 @@ import time
 import shutil
 import numpy as np
 import matplotlib.pyplot as plt
+from datetime import datetime
 
 import torch
 import torchvision.datasets
@@ -55,6 +56,40 @@ def copy_data():
             break
     
     print(f"Min number of images for an identity:{min_nb_images}")
+
+
+def preprocess_data(batch_size=64):
+    data_dirs = {"train": "aligned_train", "val": "aligned_val"}
+    
+    data_transforms = transforms.Compose([transforms.Resize(224), transforms.ToTensor()])
+    
+    image_datasets = {x: torchvision.datasets.ImageFolder(os.path.join("data", x), data_transforms) for x in [data_dirs["train"], data_dirs["val"]]}
+    dataloaders = {x: torch.utils.data.DataLoader(image_datasets[x], batch_size=batch_size, shuffle=False, drop_last=True) for x in [data_dirs["train"], data_dirs["val"]]}
+    
+    train_data_size = batch_size * len(dataloaders[data_dirs["train"]])
+    val_data_size = batch_size * len(dataloaders[data_dirs["val"]])    
+    
+    processed_data = torch.empty([train_data_size, 3, 224, 224], dtype=torch.uint8)
+    processed_labels = torch.empty([train_data_size], dtype=torch.int16)
+    
+    for batch_index, (inputs, labels) in enumerate(dataloaders[data_dirs["train"]]):
+        processed_data[batch_index*batch_size:(batch_index+1)*batch_size] = (inputs * 255).type(torch.uint8)
+        processed_labels[batch_index*batch_size:(batch_index+1)*batch_size] = labels
+        if (batch_index + 1) % 10 == 0:
+            print(f"{datetime.now()} Train:{batch_index+1}/{len(dataloaders[data_dirs['train']])}")
+    torch.save(processed_data, "data/preprocessed_data/train_data.pt")
+    torch.save(processed_labels, "data/preprocessed_data/train_labels.pt")
+    
+    processed_data = torch.empty([val_data_size, 3, 224, 224], dtype=torch.uint8)
+    processed_labels = torch.empty([val_data_size], dtype=torch.int16)
+    
+    for batch_index, (inputs, labels) in enumerate(dataloaders[data_dirs["val"]]):
+        processed_data[batch_index*batch_size:(batch_index+1)*batch_size] = (inputs * 255).type(torch.uint8)
+        processed_labels[batch_index*batch_size:(batch_index+1)*batch_size] = labels
+        if (batch_index + 1) % 10 == 0:
+            print(f"{datetime.now()} Val:{batch_index+1}/{len(dataloaders[data_dirs['val']])}")
+    torch.save(processed_data, "data/preprocessed_data/val_data.pt")
+    torch.save(processed_labels, "data/preprocessed_data/val_labels.pt")
 
 
 def print_and_log(model_dir, text):
