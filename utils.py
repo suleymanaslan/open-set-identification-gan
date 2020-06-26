@@ -250,7 +250,7 @@ def evaluate_identification(model_dir, network, data_dirs, dataloaders, class_na
             plt.savefig(f"{model_dir}/sample_predicted_{j}.png")
 
 
-def evaluate_identification_batch_iter(model_dir, network, class_names):
+def evaluate_identification_batch_iter(model_dir, network):
     device = torch.device("cuda:0")
     
     network.eval()
@@ -258,6 +258,10 @@ def evaluate_identification_batch_iter(model_dir, network, class_names):
     
     val_data = torch.load("data/preprocessed_data/val_data.pt")
     val_labels = torch.load("data/preprocessed_data/val_labels.pt")
+    
+    scale_t = torch.Tensor([255]).to(device)
+    normalize_mean_t = torch.Tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1).to(device)
+    normalize_std_t = torch.Tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1).to(device)
     
     batch_iter = batch_iterator.BatchIterator(val_data, val_labels, batch_size=8)
     
