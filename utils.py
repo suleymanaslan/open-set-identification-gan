@@ -161,6 +161,33 @@ def init_identification_training(batch_size, use_preprocessed_data=False):
     return model_dir, data_dirs, dataloaders, class_names
 
 
+def init_gan_identification_training(batch_size):
+    training_timestamp = str(int(time.time()))
+    model_dir = f'trained_models/model_identification_gan_{training_timestamp}/'
+    
+    if not os.path.exists(model_dir):
+        os.makedirs(model_dir)
+    
+    shutil.copy2('./identification_gan.ipynb', model_dir)
+    
+    data_dirs = {"train": "aligned_train", "val": "aligned_val"}
+    
+    data_transforms = {data_dirs["train"]: transforms.Compose([transforms.Resize(64),
+                                                               transforms.RandomHorizontalFlip(),
+                                                               transforms.ToTensor(),
+                                                               transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]),
+                       data_dirs["val"]: transforms.Compose([transforms.Resize(64),
+                                                             transforms.ToTensor(),
+                                                             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]),
+                      }
+    
+    image_datasets = {x: torchvision.datasets.ImageFolder(os.path.join("data", x), data_transforms[x]) for x in [data_dirs["train"], data_dirs["val"]]}
+    dataloaders = {x: torch.utils.data.DataLoader(image_datasets[x], batch_size=batch_size, shuffle=True, drop_last=True) for x in [data_dirs["train"], data_dirs["val"]]}
+    class_names = image_datasets[data_dirs["train"]].classes
+    
+    return model_dir, data_dirs, dataloaders, class_names
+
+
 def save_model(model_dir, discriminator_net, generator_net, generator_losses, discriminator_losses, generated_images):
     torch.save(discriminator_net.state_dict(), f"{model_dir}/net_discriminator.pth")
     torch.save(generator_net.state_dict(), f"{model_dir}/net_generator.pth")
@@ -220,6 +247,28 @@ def save_identification_model(model_dir, network, best_acc, train_losses, val_lo
     plt.show()
 
 
+def save_gan_identification_model(model_dir, discriminator_net, generator_net, best_acc, train_losses, train_losses_g, val_losses):
+    torch.save(discriminator_net.state_dict(), f"{model_dir}/discriminator_{best_acc:.4f}.pth")
+    torch.save(generator_net.state_dict(), f"{model_dir}/generator_{best_acc:.4f}.pth")
+    np.save(f"{model_dir}/train_losses.npy" , np.array(train_losses))
+    np.save(f"{model_dir}/train_losses_g.npy" , np.array(train_losses_g))
+    np.save(f"{model_dir}/val_losses.npy" , np.array(val_losses))
+
+    train_epoch_step = len(train_losses)//len(val_losses)
+
+    train_plot_steps = np.arange(len(train_losses))+1
+    val_plot_steps = (np.arange(len(val_losses))+1)*train_epoch_step
+    plt.figure(figsize=(10,5))
+    plt.title("Losses")
+    plt.plot(train_plot_steps, train_losses, label='train_loss', linewidth=3)
+    plt.plot(val_plot_steps, val_losses, label='val_loss', linewidth=3)
+    plt.xlabel("iterations")
+    plt.ylabel("Loss")
+    plt.legend()
+    plt.savefig(f"{model_dir}/loss.png")
+    plt.show()
+
+
 def plot_generated_images(model_dir, generated_images, n_scales=5):
     img_sizes = {0: 4, 1: 8, 2: 16, 3: 32, 4: 64}
     
@@ -247,6 +296,27 @@ def evaluate_identification(model_dir, network, data_dirs, dataloaders, class_na
             plt.figure(figsize=(8,8))
             plt.title(f"Actual:{class_names[val_labels[j]]}, Predicted:{class_names[preds[j]]}")
             plt.imshow((np.transpose(val_inputs[j].cpu().numpy(), (1, 2, 0))*np.array([0.229, 0.224, 0.225]))+np.array([0.485, 0.456, 0.406]))
+            plt.savefig(f"{model_dir}/sample_predicted_{j}.png")
+
+
+def evaluate_gan_identification(model_dir, network, data_dirs, dataloaders, class_names):
+    device = torch.device("cuda:0")
+    
+    network.eval()
+    num_images = 3
+
+    with torch.no_grad():
+        val_inputs, val_labels = next(iter(dataloaders[data_dirs["val"]]))
+        val_inputs = val_inputs.to(device)
+        val_labels = val_labels.to(device)
+
+        outputs = network(val_inputs)
+        _, preds = torch.max(outputs, 1)
+
+        for j in range(num_images):
+            plt.figure(figsize=(8,8))
+            plt.title(f"Actual:{class_names[val_labels[j]]}, Predicted:{class_names[preds[j]]}")
+            plt.imshow((np.transpose(val_inputs[j].cpu().numpy(), (1, 2, 0))*0.5)+0.5)
             plt.savefig(f"{model_dir}/sample_predicted_{j}.png")
 
 

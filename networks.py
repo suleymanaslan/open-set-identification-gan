@@ -50,3 +50,24 @@ class Discriminator(nn.Module):
 
     def forward(self, input):
         return self.main(input)
+
+
+class ClassifierDiscriminator(nn.Module):
+    def __init__(self, input_channels=3, nb_of_classes=2, feature_map_size=64, groups=1):
+        super(ClassifierDiscriminator, self).__init__()
+        net_channels = [input_channels,
+                        feature_map_size*1,
+                        feature_map_size*2,
+                        feature_map_size*4,
+                        feature_map_size*8,
+                        nb_of_classes]
+        self.main = nn.Sequential(
+            nn.Conv2d(net_channels[0], net_channels[1], 4, 2, 1), nn.LeakyReLU(0.2, inplace=True),
+            nn.Conv2d(net_channels[1], net_channels[2], 4, 2, 1), nn.BatchNorm2d(net_channels[2]), nn.LeakyReLU(0.2, inplace=True),
+            nn.Conv2d(net_channels[2], net_channels[3], 4, 2, 1), nn.BatchNorm2d(net_channels[3]), nn.LeakyReLU(0.2, inplace=True),
+            nn.Conv2d(net_channels[3], net_channels[4], 4, 2, 1), nn.BatchNorm2d(net_channels[4]), nn.LeakyReLU(0.2, inplace=True),
+            nn.Conv2d(net_channels[4], net_channels[5], 4, 1, 0)
+        )
+
+    def forward(self, input):
+        return self.main(input)
